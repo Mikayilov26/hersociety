@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#661712">
+<title>Dəvət kartları · HER Society</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<style>
+#preview{width:100%;border-radius:8px;margin-top:14px;box-shadow:0 10px 24px rgba(20,0,0,.25);display:block}
+.two{display:flex;gap:10px}.two>*{flex:1}
+.cnt{font-family:Bodoni,serif;font-size:34px;color:var(--red)}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="brand">HER SOCIETY · DƏVƏT KARTLARI</div>
+
+  <div id="login" class="card hidden">
+    <div class="center"><h1 class="script" style="font-size:48px">Xoş gəlmisiniz</h1><p class="it muted">Davam etmək üçün kodu daxil edin</p></div>
+    <label for="pin">KOD</label>
+    <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button class="btn primary" id="go">DAXİL OL</button>
+    <div class="err" id="perr"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="card">
+      <div class="caps">YENİ DƏVƏT KARTI</div>
+      <label for="name">QONAĞIN ADI</label>
+      <input id="name" placeholder="məs. Aynur xanım" maxlength="40" autocomplete="off">
+      <div class="two">
+        <div><label for="num">DƏVƏT №</label><input id="num" type="number" inputmode="numeric" min="1" max="9999"></div>
+      </div>
+      <button class="btn primary" id="make">KARTI YARAT</button>
+      <div class="err" id="merr"></div>
+      <div id="out" class="hidden">
+        <img id="preview" alt="Dəvət kartı">
+        <button class="btn primary" id="share">PAYLAŞ / ŞƏKİLLƏRƏ SAXLA</button>
+        <a class="btn ghost" id="dl" download>FAYL KİMİ YÜKLƏ</a>
+        <p class="it muted center" style="margin-top:10px;font-size:15px">Kartı qonağa DM-də şəkil kimi göndərin.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="caps">YARADILMIŞ KARTLAR</div><div class="cnt" id="count">0</div>
+      </div>
+      <div class="list" id="list"></div>
+      <p class="it muted" id="empty" style="margin-top:8px">Hələ kart yaradılmayıb.</p>
+    </div>
+
+    <div class="card">
+      <div class="caps">GİRİŞDƏKİ ADAM ÜÇÜN</div>
+      <p class="it" style="margin-top:8px">Bu linki girişdə QR oxudacaq adama göndərin. O, linki açıb eyni kodu yazacaq.</p>
+      <input id="doorlink" readonly style="margin-top:10px;font-size:15px">
+      <button class="btn ghost" id="copy">LİNKİ KOPYALA</button>
+      <button class="link" id="logout" style="margin-top:14px">ÇIXIŞ</button>
+    </div>
+  </div>
+</div>
+<script src="qrcode.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let KEY = null, current = null;
+const ISSUED = 'hs_issued_v1';
+
+async function start() {
+  KEY = await HS.storedKey();
+  if (KEY) showApp(); else $('login').classList.remove('hidden');
+}
+$('go').onclick = async () => {
+  $('go').disabled = true; $('perr').textContent = 'Yoxlanılır…';
+  const k = await HS.login($('pin').value);
+  $('go').disabled = false;
+  if (!k) { $('perr').textContent = 'Kod səhvdir.'; return; }
+  KEY = k; $('perr').textContent = ''; $('login').classList.add('hidden'); showApp();
+};
+$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('logout').onclick = () => { HS.logout(); location.reload(); };
+
+function issued() { return HS.load(ISSUED, []); }
+function nextNum() { const l = issued(); return l.reduce((m, x) => Math.max(m, x.num), 0) + 1; }
+function showApp() {
+  $('app').classList.remove('hidden');
+  $('num').value = nextNum();
+  $('doorlink').value = HS.base() + 'giris.html';
+  renderList();
+}
+function renderList() {
+  const l = issued().slice().sort((a, b) => b.num - a.num);
+  $('count').textContent = l.length;
+  $('empty').classList.toggle('hidden', l.length > 0);
+  $('list').innerHTML = l.map((x, i) => `<div class="item"><div><div class="nm">№ ${HS.pad(x.num)} · ${HS.esc(x.name)}</div><div class="sm">Kod ${x.id}</div></div><button class="link" data-i="${x.id}">KARTI AÇ</button></div>`).join('');
+  $('list').querySelectorAll('button').forEach(b => b.onclick = () => { const x = issued().find(y => y.id === b.dataset.i); if (x) { show(x); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+}
+
+$('make').onclick = async () => {
+  const name = $('name').value.replace(/\s+/g, ' ').trim();
+  const num = parseInt($('num').value, 10);
+  $('merr').textContent = '';
+  if (!name) { $('merr').textContent = 'Qonağın adını yazın.'; return; }
+  if (!(num >= 1 && num <= 9999)) { $('merr').textContent = 'Dəvət nömrəsini yazın.'; return; }
+  const l = issued();
+  if (l.some(x => x.num === num) && !confirm('№ ' + HS.pad(num) + ' artıq istifadə olunub. Yenə də bu nömrə ilə yaradılsın?')) return;
+  const id = await HS.newId(KEY);
+  const token = await HS.makeToken(KEY, id, num, name);
+  const rec = { id, num, name, token, at: Date.now() };
+  l.push(rec); HS.save(ISSUED, l);
+  $('name').value = ''; $('num').value = nextNum();
+  renderList();
+  await show(rec);
+};
+
+let bgImg = null;
+function loadBg() { return bgImg || (bgImg = new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = 'card-bg.jpg'; })); }
+
+async function drawCard(rec) {
+  const bg = await loadBg();
+  await Promise.all(['italic 500 44px CG', '500 40px CG', '700 18px CG', '400 64px Bodoni', '500 26px Bodoni'].map(f => document.fonts.load(f)));
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+  const g = c.getContext('2d');
+  g.drawImage(bg, 0, 0, 1080, 1920);
+  // name line
+  g.fillStyle = '#58130F'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  let fs = 46; const txt = 'Hörmətli ' + rec.name + ',';
+  do { g.font = `italic 500 ${fs}px CG`; if (g.measureText(txt).width <= 760) break; fs -= 2; } while (fs > 26);
+  g.fillText(txt, 540, 536);
+  // QR
+  const qr = qrcode(0, 'M'); qr.addData(HS.guestUrl(rec.token)); qr.make();
+  const n = qr.getModuleCount(), box = 330, pad = 22, size = box - pad * 2, cell = size / n;
+  const x0 = 90 + 84 + pad, y0 = 130 + 1300 + pad;
+  g.fillStyle = '#FFFDF8'; g.fillRect(90 + 84 + 6, 130 + 1300 + 6, box - 12, box - 12);
+  g.fillStyle = '#3A0B08';
+  for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) if (qr.isDark(r, q)) g.fillRect(Math.floor(x0 + q * cell), Math.floor(y0 + r * cell), Math.ceil(cell), Math.ceil(cell));
+  // number + code (right column centre x = 90+450+190)
+  const cx = 730;
+  g.fillStyle = '#661712'; g.font = '400 92px Bodoni';
+  g.fillText('№ ' + HS.pad(rec.num), cx, 130 + 1450);
+  g.fillStyle = '#A3241B';
+  if ('letterSpacing' in g) g.letterSpacing = '5px';
+  g.font = '700 18px CG'; g.textAlign = 'right'; g.fillText('KOD', cx - 70, 130 + 1491);
+  g.font = '500 26px Bodoni'; g.textAlign = 'left'; g.fillStyle = '#58130F'; g.fillText(rec.id, cx - 52, 130 + 1492);
+  if ('letterSpacing' in g) g.letterSpacing = '0px';
+  g.textAlign = 'center';
+  return c;
+}
+async function show(rec) {
+  current = rec;
+  const c = await drawCard(rec);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.93));
+  const url = URL.createObjectURL(blob);
+  $('preview').src = url;
+  const fname = `HerSociety_Devet_${HS.pad(rec.num)}_${rec.name.replace(/[^\p{L}\p{N}]+/gu, '_')}.jpg`;
+  $('dl').href = url; $('dl').download = fname;
+  current.file = new File([blob], fname, { type: 'image/jpeg' });
+  $('out').classList.remove('hidden');
+}
+$('share').onclick = async () => {
+  if (!current || !current.file) return;
+  const data = { files: [current.file], title: 'Çay Süfrəsi · Dəvət' };
+  if (navigator.canShare && navigator.canShare(data)) { try { await navigator.share(data); } catch (e) {} }
+  else { $('dl').click(); }
+};
+$('copy').onclick = async () => { try { await navigator.clipboard.writeText($('doorlink').value); $('copy').textContent = 'KOPYALANDI ✓'; } catch (e) { $('doorlink').select(); } setTimeout(() => $('copy').textContent = 'LİNKİ KOPYALA', 2000); };
+start();
+</script>
+</body></html>

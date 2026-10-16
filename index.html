@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#661712">
+<title>Çay Süfrəsi · HER Society</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<style>
+.hello{font-size:22px;margin-top:6px}
+.badge{display:inline-block;margin-top:10px;border:1.5px solid var(--red);color:var(--red);border-radius:999px;padding:6px 16px;font-weight:700;letter-spacing:.2em;font-size:12px}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="brand">HER SOCIETY</div>
+  <div class="card"><div class="frame center">
+    <div class="caps" id="kicker">DƏVƏT</div>
+    <h1 class="script" style="margin-top:6px">Çay Süfrəsi</h1>
+    <div id="hello" class="it hello">Zərifliyin detallarda gizləndiyi bir görüş</div>
+    <div id="badge" class="badge hidden"></div>
+    <div style="text-align:left;margin-top:22px">
+      <div class="row"><div class="l">TARİX</div><div class="v">Cümə, 23 oktyabr 2026</div></div>
+      <div class="row"><div class="l">SAAT</div><div class="v">13:00</div></div>
+      <div class="row"><div class="l">MƏKAN</div><div class="v">Luciano Restaurant<small>Zərifə Əliyeva küç. 97, Bakı</small></div></div>
+      <div class="row"><div class="l">QONAQ</div><div class="v">Papillon’s<small>Sabina xanım ilə süfrə təqdimatı</small></div></div>
+    </div>
+    <a class="btn primary" id="map" target="_blank" rel="noopener">XƏRİTƏDƏ AÇ</a>
+    <p id="note" class="it muted" style="margin-top:16px;font-size:16px"></p>
+  </div></div>
+  <div class="foot">Qadından qadına…</div>
+</div>
+<script src="common.js"></script>
+<script>
+document.getElementById('map').href = HS.MAP;
+const t = HS.parse(location.hash);
+const note = document.getElementById('note');
+if (t) {
+  document.getElementById('kicker').textContent = 'ŞƏXSİ DƏVƏT';
+  document.getElementById('hello').textContent = 'Hörmətli ' + t.name + ', yeriniz ayrıldı — sizi gözləyirik';
+  const b = document.getElementById('badge'); b.textContent = 'DƏVƏT № ' + HS.pad(t.num); b.classList.remove('hidden');
+  note.textContent = 'Girişdə dəvət kartınızdakı QR kodu göstərməyiniz kifayətdir.';
+} else {
+  note.innerHTML = 'Yerinizi ayırmaq üçün bizə yazın · <a href="' + HS.IG + '" style="color:inherit">@hersociety.az</a>';
+}
+</script>
+</body></html>

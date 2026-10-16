@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#661712">
+<title>Giriş · Çay Süfrəsi</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<style>
+.stat{display:flex;justify-content:space-between;align-items:center}
+.stat .n{font-family:Bodoni,serif;font-size:46px;color:var(--red);line-height:1}
+#camwrap{position:relative;margin-top:14px;border-radius:10px;overflow:hidden;background:#1a0504;aspect-ratio:1/1}
+#cam{width:100%;height:100%;object-fit:cover;display:block}
+#camwrap .aim{position:absolute;inset:18%;border:3px solid rgba(248,241,228,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+#camhint{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#F8F1E4;font-style:italic;font-size:15px}
+#ov{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 22px;color:#fff}
+#ov.ok{background:#1F6B3A}#ov.used{background:#A3241B}#ov.bad{background:#3b3b3b}
+#ov .ic{font-size:96px;line-height:1}
+#ov .t1{font-weight:700;letter-spacing:.2em;font-size:16px;margin-top:14px;opacity:.9}
+#ov .t2{font-size:40px;font-weight:600;margin-top:10px;line-height:1.15}
+#ov .t3{font-size:20px;font-style:italic;margin-top:10px;opacity:.95}
+#ov .btn{max-width:360px;background:#fff;color:#222;margin-top:34px}
+.undo{color:var(--red2)}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="brand">HER SOCIETY · GİRİŞ</div>
+
+  <div id="login" class="card hidden">
+    <div class="center"><h1 class="script" style="font-size:48px">Çay Süfrəsi</h1><p class="it muted">Giriş rejimi üçün kodu daxil edin</p></div>
+    <label for="pin">KOD</label>
+    <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button class="btn primary" id="go">DAXİL OL</button>
+    <div class="err" id="perr"></div>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="card">
+      <div class="stat"><div><div class="caps">DAXİL OLUB</div><div class="it muted" style="font-size:15px">bu telefonda qeyd olunanlar</div></div><div class="n" id="count">0</div></div>
+      <div id="camwrap" class="hidden"><video id="cam" playsinline muted autoplay></video><div class="aim"></div><div id="camhint">QR kodu çərçivəyə tutun</div></div>
+      <button class="btn primary" id="startcam">KAMERANI AÇ</button>
+      <div class="err" id="camerr"></div>
+    </div>
+
+    <div class="card">
+      <div class="caps">QR OXUNMURSA</div>
+      <p class="it" style="margin-top:6px;font-size:16px">Kartın aşağısındakı 6 simvollu kodu yazın (KOD sözünün yanında).</p>
+      <input id="manual" maxlength="6" autocapitalize="characters" autocorrect="off" spellcheck="false" style="margin-top:10px;text-transform:uppercase;letter-spacing:.2em">
+      <button class="btn ghost" id="mgo">TƏSDİQLƏ</button>
+    </div>
+
+    <div class="card">
+      <div class="caps">DAXİL OLANLAR</div>
+      <div class="list" id="list"></div>
+      <p class="it muted" id="empty" style="margin-top:8px">Hələ heç kim qeyd olunmayıb.</p>
+      <button class="link" id="logout" style="margin-top:14px">ÇIXIŞ (kodu unut)</button>
+    </div>
+  </div>
+</div>
+
+<div id="ov" class="hidden"><div class="ic" id="ovic"></div><div class="t1" id="ov1"></div><div class="t2" id="ov2"></div><div class="t3" id="ov3"></div><button class="btn" id="next">NÖVBƏTİ QONAQ</button></div>
+<canvas id="cv" class="hidden"></canvas>
+
+<script src="jsqr.js"></script>
+<script src="common.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const STORE = 'hs_checkins_v1';
+let KEY = null, stream = null, scanning = false, busy = false, lastText = '', lastAt = 0, wake = null;
+
+function checkins() { return HS.load(STORE, {}); }
+function fmt(ts) { const d = new Date(ts); return HS.pad(d.getHours()) + ':' + HS.pad(d.getMinutes()); }
+
+async function start() {
+  KEY = await HS.storedKey();
+  if (KEY) showApp(); else $('login').classList.remove('hidden');
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+}
+$('go').onclick = async () => {
+  $('go').disabled = true; $('perr').textContent = 'Yoxlanılır…';
+  const k = await HS.login($('pin').value);
+  $('go').disabled = false;
+  if (!k) { $('perr').textContent = 'Kod səhvdir.'; return; }
+  KEY = k; $('perr').textContent = ''; $('login').classList.add('hidden'); showApp();
+};
+$('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
+$('logout').onclick = () => { if (confirm('Çıxış edilsin? Daxil olanların siyahısı silinməyəcək.')) { HS.logout(); location.reload(); } };
+
+function showApp() { $('app').classList.remove('hidden'); renderList(); }
+function renderList() {
+  const c = checkins(); const arr = Object.entries(c).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.t - a.t);
+  $('count').textContent = arr.length;
+  $('empty').classList.toggle('hidden', arr.length > 0);
+  $('list').innerHTML = arr.map(x => `<div class="item"><div><div class="nm">${x.num ? '№ ' + HS.pad(x.num) + ' · ' : ''}${HS.esc(x.name || 'Kod ' + x.id)}</div><div class="sm">${fmt(x.t)}${x.manual ? ' · əl ilə' : ''} · ${x.id}</div></div><button class="link undo" data-id="${x.id}">LƏĞV ET</button></div>`).join('');
+  $('list').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (!confirm('Bu qeyd ləğv edilsin? (səhvən qeyd olunubsa)')) return;
+    const c = checkins(); delete c[b.dataset.id]; HS.save(STORE, c); renderList();
+  });
+}
+
+/* sounds */
+let actx = null;
+function beep(ok) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = ok ? [880, 1320] : [220, 180];
+    notes.forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(); o.type = ok ? 'sine' : 'square'; o.frequency.value = f; g.gain.value = ok ? .18 : .08; o.connect(g); g.connect(actx.destination); const t = actx.currentTime + i * .13; o.start(t); o.stop(t + .12); });
+  } catch (e) {}
+}
+
+function overlay(kind, icon, l1, l2, l3) {
+  const o = $('ov'); o.className = kind; $('ovic').textContent = icon; $('ov1').textContent = l1; $('ov2').textContent = l2; $('ov3').textContent = l3 || '';
+  busy = true; beep(kind === 'ok');
+}
+$('next').onclick = () => { $('ov').className = 'hidden'; busy = false; lastAt = Date.now(); };
+
+async function handle(text) {
+  const t = await HS.verify(KEY, text);
+  if (!t) { overlay('bad', '✕', 'ETİBARSIZ', 'Bu QR bizim dəvət deyil', 'Kodu əl ilə yoxlayın və ya təşkilatçıya müraciət edin'); return; }
+  mark(t.id, t.num, t.name, false);
+}
+function mark(id, num, name, manual) {
+  const c = checkins();
+  if (c[id]) { const v = c[id]; overlay('used', '!', 'ARTIQ İSTİFADƏ OLUNUB', v.name || name || ('Kod ' + id), 'Saat ' + fmt(v.t) + '-də daxil olub' + (v.num ? ' · № ' + HS.pad(v.num) : '')); return; }
+  c[id] = { num: num || null, name: name || '', t: Date.now(), manual: !!manual };
+  if (!HS.save(STORE, c)) { overlay('bad', '!', 'YADDAŞ XƏTASI', 'Qeyd saxlanmadı', 'Brauzer gizli rejimdə olmamalıdır'); return; }
+  renderList();
+  overlay('ok', '✓', 'XOŞ GƏLDİNİZ', name || ('Kod ' + id), manual ? 'Kod düzgündür · əl ilə qeyd olundu' : 'Dəvət № ' + HS.pad(num));
+}
+
+$('mgo').onclick = async () => {
+  const v = $('manual').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (v.length !== 6) { alert('Kod 6 simvoldan ibarət olmalıdır.'); return; }
+  if (!(await HS.validId(KEY, v))) { overlay('bad', '✕', 'KOD DÜZGÜN DEYİL', v, 'Kodu kartdan yenidən diqqətlə oxuyun'); return; }
+  $('manual').value = '';
+  mark(v, null, '', true);
+};
+
+$('startcam').onclick = async () => {
+  $('camerr').textContent = '';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false });
+  } catch (e) { $('camerr').textContent = 'Kamera açılmadı. Brauzerə kamera icazəsi verin (Safari: aA → Website Settings → Camera → Allow).'; return; }
+  const v = $('cam'); v.srcObject = stream; await v.play().catch(() => {});
+  $('camwrap').classList.remove('hidden'); $('startcam').classList.add('hidden');
+  try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch (e) {}
+  scanning = true; requestAnimationFrame(loop);
+};
+document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && scanning) { try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {} } });
+
+const cv = $('cv'), cx = cv.getContext('2d', { willReadFrequently: true });
+let lastScan = 0;
+function loop(ts) {
+  if (!scanning) return;
+  requestAnimationFrame(loop);
+  if (busy || ts - lastScan < 120) return;
+  lastScan = ts;
+  const v = $('cam'); if (v.readyState < 2 || !v.videoWidth) return;
+  const s = Math.min(v.videoWidth, v.videoHeight), side = Math.min(s, 720);
+  cv.width = side; cv.height = side;
+  cx.drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, side, side);
+  const img = cx.getImageData(0, 0, side, side);
+  const r = jsQR(img.data, side, side, { inversionAttempts: 'dontInvert' });
+  if (r && r.data) {
+    if (r.data === lastText && Date.now() - lastAt < 2500) return;
+    lastText = r.data; lastAt = Date.now();
+    busy = true; handle(r.data);
+  }
+}
+start();
+</script>
+</body></html>
