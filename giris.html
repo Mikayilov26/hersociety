@@ -76,17 +76,20 @@ const STORE = 'hs_checkins_v1';
 let KEY = null, stream = null, scanning = false, busy = false, lastText = '', lastAt = 0, wake = null;
 
 function checkins() { return HS.load(STORE, {}); }
-const GSTORE = 'hs_guests_v1';
+const GSTORE = 'hs_guests_v1', RSTORE = 'hs_revoked_v1';
+function revoked() { return HS.load(RSTORE, {}); }
 function guests() { return HS.load(GSTORE, {}); }
 function gname(id, fallback) { const g = guests()[id]; return (g && g.name) || fallback || ''; }
 function gnum(id, fallback) { const g = guests()[id]; return (g && g.num) || fallback || null; }
 async function importList() {
   const m = location.hash.match(/[#&]g=([^&]+)/); if (!m) return;
-  const rows = await HS.unpackList(KEY, decodeURIComponent(m[1]));
+  const data = await HS.unpackList(KEY, decodeURIComponent(m[1]));
   history.replaceState(null, '', location.pathname);
-  if (!rows) { alert('Siyahı linki etibarsızdır.'); return; }
+  if (!data) { alert('Siyahı linki etibarsızdır.'); return; }
+  const rows = Array.isArray(data) ? data : (data.g || []), rev = Array.isArray(data) ? [] : (data.r || []);
   const g = {}; rows.forEach(r => { if (Array.isArray(r) && r.length >= 3) g[r[0]] = { num: r[1], name: r[2] }; });
-  HS.save(GSTORE, g);
+  const rv = {}; rev.forEach(r => { if (Array.isArray(r) && r.length >= 3) rv[r[0]] = { num: r[1], name: r[2] }; });
+  HS.save(GSTORE, g); HS.save(RSTORE, rv);
   alert('Qonaq siyahısı yeniləndi: ' + Object.keys(g).length + ' nəfər ✓');
 }
 function fmt(ts) { const d = new Date(ts); return HS.pad(d.getHours()) + ':' + HS.pad(d.getMinutes()); }
@@ -162,6 +165,8 @@ async function handle(text) {
   mark(t.id, t.num, t.name, false);
 }
 function mark(id, num, name, manual) {
+  const rv = revoked()[id];
+  if (rv) { overlay('bad', '✕', 'DƏVƏT LƏĞV OLUNUB', rv.name || name || ('Kod ' + id), 'Bu kart təşkilatçı tərəfindən silinib' + (rv.num ? ' · № ' + HS.pad(rv.num) : '')); return; }
   name = name || gname(id); num = num || gnum(id);
   const c = checkins();
   if (c[id]) { const v = c[id]; overlay('used', '!', 'ARTIQ İSTİFADƏ OLUNUB', v.name || name || ('Kod ' + id), 'Saat ' + fmt(v.t) + '-də daxil olub' + (v.num ? ' · № ' + HS.pad(v.num) : '')); return; }

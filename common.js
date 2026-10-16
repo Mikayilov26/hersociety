@@ -74,7 +74,7 @@ const HS = {
     const i = str.lastIndexOf('.'); if (i < 0) return null;
     const body = str.slice(0, i), sig = str.slice(i + 1);
     if ((await HS.mac(key, 'list:' + body)).slice(0, 16) !== sig) return null;
-    try { const rows = JSON.parse(new TextDecoder().decode(HS.unb64u(body))); return Array.isArray(rows) ? rows : null; } catch (e) { return null; }
+    try { const d = JSON.parse(new TextDecoder().decode(HS.unb64u(body))); return (d && typeof d === 'object') ? d : null; } catch (e) { return null; }
   },
   pad(n) { return String(n).padStart(2, '0'); },
   esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },

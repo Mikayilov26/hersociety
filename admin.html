@@ -90,8 +90,20 @@ function renderList() {
   const l = issued().slice().sort((a, b) => b.num - a.num);
   $('count').textContent = l.length;
   $('empty').classList.toggle('hidden', l.length > 0);
-  $('list').innerHTML = l.map((x, i) => `<div class="item"><div><div class="nm">№ ${HS.pad(x.num)} · ${HS.esc(x.name)}</div><div class="sm">Kod ${x.id}</div></div><button class="link" data-i="${x.id}">KARTI AÇ</button></div>`).join('');
-  $('list').querySelectorAll('button').forEach(b => b.onclick = () => { const x = issued().find(y => y.id === b.dataset.i); if (x) { show(x); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  $('list').innerHTML = l.map((x, i) => `<div class="item"><div><div class="nm">№ ${HS.pad(x.num)} · ${HS.esc(x.name)}</div><div class="sm">Kod ${x.id}</div></div><div style="flex:none"><button class="link" data-i="${x.id}">AÇ</button><button class="link" data-del="${x.id}" style="color:#7a7a7a;margin-left:14px">SİL</button></div></div>`).join('');
+  $('list').querySelectorAll('button[data-i]').forEach(b => b.onclick = () => { const x = issued().find(y => y.id === b.dataset.i); if (x) { show(x); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+  $('list').querySelectorAll('button[data-del]').forEach(b => b.onclick = () => del(b.dataset.del));
+}
+const REVOKED = 'hs_revoked_v1';
+function del(id) {
+  const l = issued(), x = l.find(y => y.id === id); if (!x) return;
+  if (!confirm('№ ' + HS.pad(x.num) + ' · ' + x.name + ' — bu kart silinsin?\n\nKart girişdə etibarsız sayılacaq (siyahını girişə yenidən göndərdikdən sonra).')) return;
+  HS.save(ISSUED, l.filter(y => y.id !== id));
+  const r = HS.load(REVOKED, []); r.push([x.id, x.num, x.name]); HS.save(REVOKED, r);
+  if (current && current.id === id) { $('out').classList.add('hidden'); current = null; }
+  $('num').value = nextNum();
+  renderList();
+  $('listinfo').textContent = 'Kart silindi. Siyahını girişə yenidən göndərməyi unutmayın.';
 }
 
 $('make').onclick = async () => {
@@ -164,7 +176,7 @@ $('share').onclick = async () => {
 $('sendlist').onclick = async () => {
   const l = issued();
   const rows = l.map(x => [x.id, x.num, x.name]);
-  const url = HS.base() + 'giris.html#g=' + await HS.packList(KEY, rows);
+  const url = HS.base() + 'giris.html#g=' + await HS.packList(KEY, { g: rows, r: HS.load(REVOKED, []) });
   const info = l.length + ' qonaqlı siyahı';
   try {
     if (navigator.share) { await navigator.share({ title: 'Çay Süfrəsi · Giriş', text: 'Giriş səhifəsi (' + info + '):', url }); $('listinfo').textContent = info + ' göndərildi ✓'; return; }
