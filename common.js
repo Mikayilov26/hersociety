@@ -68,6 +68,14 @@ const HS = {
     const exp = (await HS.mac(key, t.payload)).slice(0, 16);
     return exp === t.sig && await HS.validId(key, t.id) ? t : null;
   },
+  /* guest list for the door phone: [[id,num,name],...] packed + signed */
+  async packList(key, rows) { const body = HS.b64u(new TextEncoder().encode(JSON.stringify(rows))); return body + '.' + (await HS.mac(key, 'list:' + body)).slice(0, 16); },
+  async unpackList(key, str) {
+    const i = str.lastIndexOf('.'); if (i < 0) return null;
+    const body = str.slice(0, i), sig = str.slice(i + 1);
+    if ((await HS.mac(key, 'list:' + body)).slice(0, 16) !== sig) return null;
+    try { const rows = JSON.parse(new TextDecoder().decode(HS.unb64u(body))); return Array.isArray(rows) ? rows : null; } catch (e) { return null; }
+  },
   pad(n) { return String(n).padStart(2, '0'); },
   esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
   load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },

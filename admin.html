@@ -51,9 +51,9 @@
 
     <div class="card">
       <div class="caps">GİRİŞDƏKİ ADAM ÜÇÜN</div>
-      <p class="it" style="margin-top:8px">Bu linki girişdə QR oxudacaq adama göndərin. O, linki açıb eyni kodu yazacaq.</p>
-      <input id="doorlink" readonly style="margin-top:10px;font-size:15px">
-      <button class="btn ghost" id="copy">LİNKİ KOPYALA</button>
+      <p class="it" style="margin-top:8px">Bu link girişdəki telefona <b>qonaq siyahısını</b> da ötürür: adlar görünür, adla axtarmaq olur. Yeni kart yaratdıqdan sonra linki yenidən göndərin — ən sonuncunu tədbir səhəri göndərmək kifayətdir.</p>
+      <button class="btn primary" id="sendlist">SİYAHI İLƏ LİNKİ GÖNDƏR</button>
+      <p class="it muted center" id="listinfo" style="margin-top:8px;font-size:15px"></p>
       <button class="link" id="logout" style="margin-top:14px">ÇIXIŞ</button>
     </div>
   </div>
@@ -84,7 +84,6 @@ function nextNum() { const l = issued(); return l.reduce((m, x) => Math.max(m, x
 function showApp() {
   $('app').classList.remove('hidden');
   $('num').value = nextNum();
-  $('doorlink').value = HS.base() + 'giris.html';
   renderList();
 }
 function renderList() {
@@ -162,7 +161,17 @@ $('share').onclick = async () => {
   if (navigator.canShare && navigator.canShare(data)) { try { await navigator.share(data); } catch (e) {} }
   else { $('dl').click(); }
 };
-$('copy').onclick = async () => { try { await navigator.clipboard.writeText($('doorlink').value); $('copy').textContent = 'KOPYALANDI ✓'; } catch (e) { $('doorlink').select(); } setTimeout(() => $('copy').textContent = 'LİNKİ KOPYALA', 2000); };
+$('sendlist').onclick = async () => {
+  const l = issued();
+  const rows = l.map(x => [x.id, x.num, x.name]);
+  const url = HS.base() + 'giris.html#g=' + await HS.packList(KEY, rows);
+  const info = l.length + ' qonaqlı siyahı';
+  try {
+    if (navigator.share) { await navigator.share({ title: 'Çay Süfrəsi · Giriş', text: 'Giriş səhifəsi (' + info + '):', url }); $('listinfo').textContent = info + ' göndərildi ✓'; return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(url); $('listinfo').textContent = info + ' — link kopyalandı ✓, mesaja yapışdırın'; }
+  catch (e) { prompt('Linki kopyalayın:', url); }
+};
 start();
 </script>
 </body></html>

@@ -50,6 +50,13 @@
     </div>
 
     <div class="card">
+      <div class="stat"><div class="caps">QONAQ SİYAHISI</div><div class="it" id="gstat" style="font-size:16px"></div></div>
+      <input id="search" placeholder="Adla axtar…" autocomplete="off" style="margin-top:10px">
+      <div class="list" id="glist"></div>
+      <p class="it muted" id="gempty" style="margin-top:8px;font-size:15px">Siyahı yoxdur. Təşkilatçıdan “siyahı ilə link” istəyin.</p>
+    </div>
+
+    <div class="card">
       <div class="caps">DAXİL OLANLAR</div>
       <div class="list" id="list"></div>
       <p class="it muted" id="empty" style="margin-top:8px">Hələ heç kim qeyd olunmayıb.</p>
@@ -69,6 +76,19 @@ const STORE = 'hs_checkins_v1';
 let KEY = null, stream = null, scanning = false, busy = false, lastText = '', lastAt = 0, wake = null;
 
 function checkins() { return HS.load(STORE, {}); }
+const GSTORE = 'hs_guests_v1';
+function guests() { return HS.load(GSTORE, {}); }
+function gname(id, fallback) { const g = guests()[id]; return (g && g.name) || fallback || ''; }
+function gnum(id, fallback) { const g = guests()[id]; return (g && g.num) || fallback || null; }
+async function importList() {
+  const m = location.hash.match(/[#&]g=([^&]+)/); if (!m) return;
+  const rows = await HS.unpackList(KEY, decodeURIComponent(m[1]));
+  history.replaceState(null, '', location.pathname);
+  if (!rows) { alert('Siyahı linki etibarsızdır.'); return; }
+  const g = {}; rows.forEach(r => { if (Array.isArray(r) && r.length >= 3) g[r[0]] = { num: r[1], name: r[2] }; });
+  HS.save(GSTORE, g);
+  alert('Qonaq siyahısı yeniləndi: ' + Object.keys(g).length + ' nəfər ✓');
+}
 function fmt(ts) { const d = new Date(ts); return HS.pad(d.getHours()) + ':' + HS.pad(d.getMinutes()); }
 
 async function start() {
@@ -86,16 +106,38 @@ $('go').onclick = async () => {
 $('pin').addEventListener('keydown', e => { if (e.key === 'Enter') $('go').click(); });
 $('logout').onclick = () => { if (confirm('Çıxış edilsin? Daxil olanların siyahısı silinməyəcək.')) { HS.logout(); location.reload(); } };
 
-function showApp() { $('app').classList.remove('hidden'); renderList(); }
+async function showApp() { $('app').classList.remove('hidden'); await importList(); renderList(); }
+$('search').addEventListener('input', () => renderGuests());
+function renderGuests() {
+  const g = guests(), c = checkins(), q = $('search').value.trim().toLocaleLowerCase('az');
+  const ids = Object.keys(g);
+  const came = ids.filter(id => c[id]).length;
+  $('gstat').textContent = ids.length ? (came + ' / ' + ids.length + ' gəlib') : '';
+  $('gempty').classList.toggle('hidden', ids.length > 0);
+  $('search').classList.toggle('hidden', ids.length === 0);
+  let arr = ids.map(id => ({ id, ...g[id], in: c[id] }));
+  if (q) arr = arr.filter(x => x.name.toLocaleLowerCase('az').includes(q) || x.id.toLowerCase().includes(q) || String(x.num) === q);
+  else arr = arr.filter(x => !x.in);
+  arr.sort((a, b) => a.num - b.num);
+  $('glist').innerHTML = (q ? '' : (arr.length ? '<p class="it muted" style="font-size:14px;margin-top:8px">Hələ gəlməyənlər:</p>' : '<p class="it muted" style="font-size:15px;margin-top:8px">Hamı gəlib ✓</p>')) +
+    arr.map(x => `<div class="item"><div><div class="nm">№ ${HS.pad(x.num)} · ${HS.esc(x.name)}</div><div class="sm">${x.in ? 'daxil olub · ' + fmt(x.in.t) : 'gözlənilir'} · ${x.id}</div></div>${x.in ? '' : `<button class="link" data-id="${x.id}">DAXİL ET</button>`}</div>`).join('');
+  $('glist').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const x = g[b.dataset.id]; if (!x) return;
+    if (!confirm('№ ' + HS.pad(x.num) + ' · ' + x.name + ' — daxil olaraq qeyd edilsin?')) return;
+    $('search').value = ''; mark(b.dataset.id, x.num, x.name, true);
+  });
+}
 function renderList() {
   const c = checkins(); const arr = Object.entries(c).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.t - a.t);
   $('count').textContent = arr.length;
   $('empty').classList.toggle('hidden', arr.length > 0);
+  arr.forEach(x => { x.name = x.name || gname(x.id); x.num = x.num || gnum(x.id); });
   $('list').innerHTML = arr.map(x => `<div class="item"><div><div class="nm">${x.num ? '№ ' + HS.pad(x.num) + ' · ' : ''}${HS.esc(x.name || 'Kod ' + x.id)}</div><div class="sm">${fmt(x.t)}${x.manual ? ' · əl ilə' : ''} · ${x.id}</div></div><button class="link undo" data-id="${x.id}">LƏĞV ET</button></div>`).join('');
   $('list').querySelectorAll('button').forEach(b => b.onclick = () => {
     if (!confirm('Bu qeyd ləğv edilsin? (səhvən qeyd olunubsa)')) return;
     const c = checkins(); delete c[b.dataset.id]; HS.save(STORE, c); renderList();
   });
+  renderGuests();
 }
 
 /* sounds */
@@ -120,12 +162,13 @@ async function handle(text) {
   mark(t.id, t.num, t.name, false);
 }
 function mark(id, num, name, manual) {
+  name = name || gname(id); num = num || gnum(id);
   const c = checkins();
   if (c[id]) { const v = c[id]; overlay('used', '!', 'ARTIQ İSTİFADƏ OLUNUB', v.name || name || ('Kod ' + id), 'Saat ' + fmt(v.t) + '-də daxil olub' + (v.num ? ' · № ' + HS.pad(v.num) : '')); return; }
   c[id] = { num: num || null, name: name || '', t: Date.now(), manual: !!manual };
   if (!HS.save(STORE, c)) { overlay('bad', '!', 'YADDAŞ XƏTASI', 'Qeyd saxlanmadı', 'Brauzer gizli rejimdə olmamalıdır'); return; }
   renderList();
-  overlay('ok', '✓', 'XOŞ GƏLDİNİZ', name || ('Kod ' + id), manual ? 'Kod düzgündür · əl ilə qeyd olundu' : 'Dəvət № ' + HS.pad(num));
+  overlay('ok', '✓', 'XOŞ GƏLDİNİZ', name || ('Kod ' + id), (num ? 'Dəvət № ' + HS.pad(num) : '') + (manual ? (num ? ' · ' : '') + 'əl ilə qeyd olundu' : ''));
 }
 
 $('mgo').onclick = async () => {
