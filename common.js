@@ -1,12 +1,12 @@
 /* HER Society · Çay Süfrəsi — shared helpers */
 const HS = {
-  SALT: 'hersociety-cay-sufresi-2026',
+  SALT: 'hersociety-cay-sufresi-2026-11-21',
   ITER: 150000,
-  CHECK: 'SFQYGfFZ4kLv',
-  MAP: 'https://maps.app.goo.gl/szwMXMpqajJ72bJh8',
+  CHECK: 'XVkWEVMtMba2',
+  MAP: 'https://www.google.com/maps/search/?api=1&query=Latitude+%26+Longitude+Bar+Lounge+The+Merchant+Baku',
   IG: 'https://instagram.com/hersociety.az',
   ALPHA: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789',
-  KEY_STORE: 'hs_key_v1',
+  KEY_STORE: 'hs_key_v2',
 
   base() { return location.origin + location.pathname.replace(/[^/]*$/, ''); },
 

@@ -10,10 +10,12 @@
 #preview{width:100%;border-radius:8px;margin-top:14px;box-shadow:0 10px 24px rgba(20,0,0,.25);display:block}
 .two{display:flex;gap:10px}.two>*{flex:1}
 .cnt{font-family:Bodoni,serif;font-size:34px;color:var(--red)}
+.logo{text-align:center;margin:4px 0 6px}.logo img{width:96px;height:auto}
 </style>
 </head><body>
 <div class="wrap">
-  <div class="brand">HER SOCIETY · DƏVƏT KARTLARI</div>
+  <div class="logo"><img src="logo.png" alt="HER Society"></div>
+  <div class="brand">DƏVƏT KARTLARI</div>
 
   <div id="login" class="card hidden">
     <div class="center"><h1 class="script" style="font-size:48px">Xoş gəlmisiniz</h1><p class="it muted">Davam etmək üçün kodu daxil edin</p></div>
@@ -63,7 +65,7 @@
 <script>
 const $ = id => document.getElementById(id);
 let KEY = null, current = null;
-const ISSUED = 'hs_issued_v1';
+const ISSUED = 'hs_issued_v2';
 
 async function start() {
   KEY = await HS.storedKey();
@@ -94,7 +96,7 @@ function renderList() {
   $('list').querySelectorAll('button[data-i]').forEach(b => b.onclick = () => { const x = issued().find(y => y.id === b.dataset.i); if (x) { show(x); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
   $('list').querySelectorAll('button[data-del]').forEach(b => b.onclick = () => del(b.dataset.del));
 }
-const REVOKED = 'hs_revoked_v1';
+const REVOKED = 'hs_revoked_v2';
 function del(id) {
   const l = issued(), x = l.find(y => y.id === id); if (!x) return;
   if (!confirm('№ ' + HS.pad(x.num) + ' · ' + x.name + ' — bu kart silinsin?\n\nKart girişdə etibarsız sayılacaq (siyahını girişə yenidən göndərdikdən sonra).')) return;
@@ -136,7 +138,7 @@ async function drawCard(rec) {
   g.fillStyle = '#58130F'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
   let fs = 46; const txt = 'Hörmətli ' + rec.name + ',';
   do { g.font = `italic 500 ${fs}px CG`; if (g.measureText(txt).width <= 760) break; fs -= 2; } while (fs > 26);
-  g.fillText(txt, 540, 536);
+  g.fillText(txt, 540, 560);
   // QR
   const qr = qrcode(0, 'M'); qr.addData(HS.guestUrl(rec.token)); qr.make();
   const n = qr.getModuleCount(), box = 330, pad = 22, size = box - pad * 2, cell = size / n;

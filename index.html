@@ -7,22 +7,25 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 <style>
-.hello{font-size:22px;margin-top:6px}
+.theme{font-size:24px;color:var(--red);margin-top:2px}
+.hello{font-size:20px;margin-top:8px}
+.logo{text-align:center;margin:4px 0 14px}.logo img{width:132px;height:auto}
 .badge{display:inline-block;margin-top:10px;border:1.5px solid var(--red);color:var(--red);border-radius:999px;padding:6px 16px;font-weight:700;letter-spacing:.2em;font-size:12px}
 </style>
 </head><body>
 <div class="wrap">
-  <div class="brand">HER SOCIETY</div>
+  <div class="logo"><img src="logo.png" alt="HER Society"></div>
   <div class="card"><div class="frame center">
     <div class="caps" id="kicker">DƏVƏT</div>
     <h1 class="script" style="margin-top:6px">Çay Süfrəsi</h1>
-    <div id="hello" class="it hello">Zərifliyin detallarda gizləndiyi bir görüş</div>
+    <div class="it theme">Bir qadının bir neçə rolu</div>
+    <div id="hello" class="it hello">Yerinizi ayırmaq üçün bizə yazın</div>
     <div id="badge" class="badge hidden"></div>
     <div style="text-align:left;margin-top:22px">
-      <div class="row"><div class="l">TARİX</div><div class="v">Cümə, 23 oktyabr 2026</div></div>
+      <div class="row"><div class="l">TARİX</div><div class="v">Şənbə, 21 noyabr 2026</div></div>
       <div class="row"><div class="l">SAAT</div><div class="v">13:00</div></div>
-      <div class="row"><div class="l">MƏKAN</div><div class="v">Luciano Restaurant<small>Zərifə Əliyeva küç. 97, Bakı</small></div></div>
-      <div class="row"><div class="l">QONAQ</div><div class="v">Papillon’s<small>Sabina xanım ilə süfrə təqdimatı</small></div></div>
+      <div class="row"><div class="l">MƏKAN</div><div class="v"><span lang="en">Latitude &amp; Longitude Bar Lounge</span><small>The Merchant Baku, Əziz Əliyev küç. 4/6, Bakı</small></div></div>
+      <div class="row"><div class="l">QONAQ</div><div class="v">Dilarə Əliyeva<small>Azərbaycanın Əməkdar artisti</small></div></div>
     </div>
     <a class="btn primary" id="map" target="_blank" rel="noopener">XƏRİTƏDƏ AÇ</a>
     <p id="note" class="it muted" style="margin-top:16px;font-size:16px"></p>
@@ -40,7 +43,7 @@ if (t) {
   const b = document.getElementById('badge'); b.textContent = 'DƏVƏT № ' + HS.pad(t.num); b.classList.remove('hidden');
   note.textContent = 'Girişdə dəvət kartınızdakı QR kodu göstərməyiniz kifayətdir.';
 } else {
-  note.innerHTML = 'Yerinizi ayırmaq üçün bizə yazın · <a href="' + HS.IG + '" style="color:inherit">@hersociety.az</a>';
+  note.innerHTML = '<a href="' + HS.IG + '" style="color:inherit">@hersociety.az</a>';
 }
 </script>
 </body></html>

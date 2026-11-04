@@ -1,4 +1,4 @@
-HER Society — Çay Süfrəsi dəvət sistemi.
+HER Society — Çay Süfrəsi dəvət sistemi (21 noyabr 2026 · Bir qadının bir neçə rolu).
 
 - index.html — qonağın dəvət səhifəsi
 - admin.html — dəvət kartlarını yaratmaq

@@ -21,10 +21,12 @@
 #ov .t3{font-size:20px;font-style:italic;margin-top:10px;opacity:.95}
 #ov .btn{max-width:360px;background:#fff;color:#222;margin-top:34px}
 .undo{color:var(--red2)}
+.logo{text-align:center;margin:4px 0 6px}.logo img{width:96px;height:auto}
 </style>
 </head><body>
 <div class="wrap">
-  <div class="brand">HER SOCIETY · GİRİŞ</div>
+  <div class="logo"><img src="logo.png" alt="HER Society"></div>
+  <div class="brand">GİRİŞ</div>
 
   <div id="login" class="card hidden">
     <div class="center"><h1 class="script" style="font-size:48px">Çay Süfrəsi</h1><p class="it muted">Giriş rejimi üçün kodu daxil edin</p></div>
@@ -72,11 +74,11 @@
 <script src="common.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const STORE = 'hs_checkins_v1';
+const STORE = 'hs_checkins_v2';
 let KEY = null, stream = null, scanning = false, busy = false, lastText = '', lastAt = 0, wake = null;
 
 function checkins() { return HS.load(STORE, {}); }
-const GSTORE = 'hs_guests_v1', RSTORE = 'hs_revoked_v1';
+const GSTORE = 'hs_guests_v2', RSTORE = 'hs_revoked_v2';
 function revoked() { return HS.load(RSTORE, {}); }
 function guests() { return HS.load(GSTORE, {}); }
 function gname(id, fallback) { const g = guests()[id]; return (g && g.name) || fallback || ''; }
